@@ -132,6 +132,11 @@ class Outbound {
 			throw new \Exception('Invalid email address: '.$type.' - '.$email);
 		}
 
+		if(count($this->to) + count($this->cc) + count($this->bcc) === 20)
+		{
+			throw new \Exception('Too many recipients');
+		}
+
 		$data = array(
 			'email' => trim($email), 
 			'name' => $name
