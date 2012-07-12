@@ -191,6 +191,23 @@ class Outbound {
 
 	public function send()
 	{
+		// Validate required data
+		if(empty($this->from['email']))
+		{
+			throw new \Exception('Data missing: from email address');
+		}
+
+		if((!isset($this->to[0]['email'])) || empty($this->to[0]['email']))
+		{
+			throw new \Exception('Data missing: to email address');
+		}
+
+		if(empty($this->subject))
+		{
+			throw new \Exception('Data missing: subject');
+		}
+
+		// Format data to be posted
 		$data = array(
 			'Subject' => $this->subject,
 			'From' => $this->format_address($this->from['email'], $this->from['name']),
