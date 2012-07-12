@@ -98,6 +98,13 @@ class Outbound {
 		return $this;
 	}
 
+	public function from_name($name)
+	{
+		$this->from['name'] = $name;
+
+		return $this;
+	}
+
 	public function reply_to($email, $name = '')
 	{
 		$this->reply_to = array(
