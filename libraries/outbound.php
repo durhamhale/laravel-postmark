@@ -30,14 +30,18 @@ class Outbound {
 
 	public function __construct()
 	{
-		$this->api_key = \Config::get('postmark.api_key');
+		$config = \Config::get('postmark');
 
-		if(empty($this->api_key))
+		$this->api_key = $config['api_key'];
+
+		if(empty($config['api_key']))
 		{
 			$this->api_key = 'POSTMARK_API_TEST';
 		}
 
 		$this->reset();
+	
+		$this->from($config['from_email'], $config['from_name']);
 	}
 
 	public static function init()
