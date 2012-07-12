@@ -26,6 +26,8 @@ class Outbound {
 
 	private $tag = array();
 
+	private $headers = array();
+
 	public function __construct()
 	{
 		$this->api_key = \Config::get('postmark.api_key');
@@ -34,11 +36,31 @@ class Outbound {
 		{
 			$this->api_key = 'POSTMARK_API_TEST';
 		}
+
+		$this->reset();
 	}
 
 	public static function init()
 	{
 		return new self();
+	}
+
+	public function reset()
+	{
+		$this->to = array();
+		$this->cc = array();
+		$this->bcc = array();
+		$this->from = array();
+		$this->reply_to = array();
+	
+		$this->subject = '';
+	
+		$this->html = '';
+		$this->text = '';
+
+		$this->tag = array();
+
+		$this->headers = array();
 	}
 
 	public function to($email, $name = '')
@@ -127,6 +149,13 @@ class Outbound {
 		return $this;
 	}
 
+	public function header($name, $value)
+	{
+		$this->headers[$name] = $value;
+		
+		return $this;
+	}
+
 	private function format_address($email, $name = '')
 	{
 		return (!empty($name))
@@ -174,6 +203,19 @@ class Outbound {
 		if(!empty($this->tag))
 		{
 			$data['Tag'] = $this->tag;
+		}
+
+		if(!empty($this->headers))
+		{
+			$data['Headers'] = array();
+
+			foreach($this->headers as $name => $value)
+			{
+				$data['Headers'][] = array(
+					'Name' => $name, 
+					'Value' => $value
+				);
+			}
 		}
 
 		$headers = array(
