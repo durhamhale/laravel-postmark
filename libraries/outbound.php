@@ -26,6 +26,9 @@ class Outbound {
 
 	private $tag = array();
 
+	private $attachments = array();
+	private $attachments_total_size = 0;
+
 	private $headers = array();
 
 	public function __construct()
@@ -64,6 +67,9 @@ class Outbound {
 
 		$this->tag = array();
 
+		$this->attachments = array();
+		$this->attachments_total_size = 0;
+
 		$this->headers = array();
 	}
 
@@ -97,7 +103,7 @@ class Outbound {
 
 		$this->from = array(
 			'email' => trim($email), 
-			'name' => $name
+			'name' => $name,
 		);
 
 		return $this;
@@ -119,7 +125,7 @@ class Outbound {
 
 		$this->reply_to = array(
 			'email' => trim($email), 
-			'name' => $name
+			'name' => $name,
 		);
 
 		return $this;
@@ -139,7 +145,7 @@ class Outbound {
 
 		$data = array(
 			'email' => trim($email), 
-			'name' => $name
+			'name' => $name,
 		);
 		
 		if(isset($this->$type))
@@ -192,6 +198,28 @@ class Outbound {
 		return (!empty($name))
 			? '"'.str_replace('"', '', $name).'" <'.$email.'>'
 			: $email;
+	}
+
+	public function attachment($file_name, $content, $mime_type)
+	{
+		$max_size = \Config::get('postmark.max_attachment_size');
+
+		$size = strlen($content);
+
+		if($this->attachments_total_size + $size > $max_size)
+		{
+			throw new \Exception('Attachements may not exceed '.(($max_size/1024)/1024).'MB');
+		}
+
+		$this->attachments[] = array(
+			'name' => $file_name,
+			'content' => base64_encode($content),
+			'mime_type' => $mime_type,
+		);
+
+		$this->attachments_total_size += $size;
+
+		return $this;
 	}
 
 	public function send()
@@ -253,6 +281,20 @@ class Outbound {
 			$data['Tag'] = $this->tag;
 		}
 
+		if (!empty($this->attachments))
+		{
+			$data['Attachments'] = array();
+
+			foreach($this->attachments as $file)
+			{
+				$data['Attachments'][] = array(
+					'Name' => $file['name'],
+					'Content' => $file['content'],
+					'ContentType' => $file['mime_type'],
+				);
+			}
+		}
+
 		if(!empty($this->headers))
 		{
 			$data['Headers'] = array();
@@ -261,15 +303,15 @@ class Outbound {
 			{
 				$data['Headers'][] = array(
 					'Name' => $name, 
-					'Value' => $value
+					'Value' => $value,
 				);
 			}
 		}
-
+		
 		$headers = array(
 			'Accept: application/json',
 			'Content-Type: application/json',
-			'X-Postmark-Server-Token: '.$this->api_key
+			'X-Postmark-Server-Token: '.$this->api_key,
 		);
 
 		$curl = curl_init();

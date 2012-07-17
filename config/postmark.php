@@ -28,4 +28,16 @@ return array(
 	'from_email' => '',
 	'from_name' => '',
 
+	/*
+	|--------------------------------------------------------------------------
+	| Maximum Attachment Size- bytes
+	|--------------------------------------------------------------------------
+	|
+	| Postmark limits the maximum size of all attachments to 10MB. This value
+	| should be be changes if you wish to lower the attachment size limit.
+	|
+	*/
+
+	'max_attachment_size' => '10485760',
+
 );
