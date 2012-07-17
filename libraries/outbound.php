@@ -52,25 +52,50 @@ class Outbound {
 		return new self();
 	}
 
-	public function reset()
+	public function __call($method, $arguments)
 	{
-		$this->to = array();
-		$this->cc = array();
-		$this->bcc = array();
-		$this->from = array();
-		$this->reply_to = array();
-	
-		$this->subject = '';
-	
-		$this->html = '';
-		$this->text = '';
+		if(substr($method, 0, 5) == 'reset')
+		{
+			$segments = explode('_', $method);
 
-		$this->tag = array();
+			// Reset specific field
+			if(isset($segments[1]) && isset($this->{$segments[1]}))
+			{
+				switch(gettype($this->{$segments[1]}))
+				{
+					case 'string';
+						$this->{$segments[1]} = '';
+					break;
+					case 'integer';
+						$this->{$segments[1]} = 0;
+					break;
+					case 'array';
+						$this->{$segments[1]} = array();
+					break;
+				}
+			}
+			// Reset all
+			else
+			{
+				$this->to = array();
+				$this->cc = array();
+				$this->bcc = array();
+				$this->from = array();
+				$this->reply_to = array();
 
-		$this->attachments = array();
-		$this->attachments_total_size = 0;
+				$this->subject = '';
 
-		$this->headers = array();
+				$this->html = '';
+				$this->text = '';
+
+				$this->tag = array();
+
+				$this->attachments = array();
+				$this->attachments_total_size = 0;
+
+				$this->headers = array();
+			}
+		}
 	}
 
 	public function to($email, $name = '')
@@ -219,7 +244,7 @@ class Outbound {
 		{
 			throw new ValidationException('Data missing: to email address');
 		}
-
+		
 		if(empty($this->subject))
 		{
 			throw new ValidationException('Data missing: subject');
