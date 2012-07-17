@@ -96,11 +96,6 @@ class Outbound {
 
 	public function from($email, $name = '')
 	{
-		if(!$this->validate_email($email))
-		{
-			throw new \Exception('Invalid email address: from - '.$email);
-		}
-
 		$this->from = array(
 			'email' => trim($email), 
 			'name' => $name,
@@ -118,11 +113,6 @@ class Outbound {
 
 	public function reply_to($email, $name = '')
 	{
-		if(!$this->validate_email($email))
-		{
-			throw new \Exception('Invalid email address: reply_to - '.$email);
-		}
-
 		$this->reply_to = array(
 			'email' => trim($email), 
 			'name' => $name,
@@ -133,14 +123,9 @@ class Outbound {
 
 	private function add_email($type, $email, $name)
 	{
-		if(!$this->validate_email($email))
-		{
-			throw new \Exception('Invalid email address: '.$type.' - '.$email);
-		}
-
 		if(count($this->to) + count($this->cc) + count($this->bcc) === 20)
 		{
-			throw new \Exception('Too many recipients');
+			throw new RestrictionException('Recipients may not exceed 20');
 		}
 
 		$data = array(
@@ -154,7 +139,7 @@ class Outbound {
 		}
 		else
 		{
-			throw new \Exception('Invalid recipient type "'.$type.'".');
+			throw new ValidationException('Invalid recipient type: "'.$type.'".');
 		}
 	}
 
@@ -208,7 +193,7 @@ class Outbound {
 
 		if($this->attachments_total_size + $size > $max_size)
 		{
-			throw new \Exception('Attachements may not exceed '.(($max_size/1024)/1024).'MB');
+			throw new RestrictionException('Attachements may not exceed '.(($max_size/1024)/1024).'MB');
 		}
 
 		$this->attachments[] = array(
@@ -227,17 +212,17 @@ class Outbound {
 		// Validate required data
 		if(empty($this->from['email']))
 		{
-			throw new \Exception('Data missing: from email address');
+			throw new ValidationException('Data missing: from email address');
 		}
 
 		if((!isset($this->to[0]['email'])) || empty($this->to[0]['email']))
 		{
-			throw new \Exception('Data missing: to email address');
+			throw new ValidationException('Data missing: to email address');
 		}
 
 		if(empty($this->subject))
 		{
-			throw new \Exception('Data missing: subject');
+			throw new ValidationException('Data missing: subject');
 		}
 
 		// Format data to be posted
@@ -323,33 +308,30 @@ class Outbound {
 		curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
 
 		$curl_response = curl_exec($curl);
-		$curl_error = curl_error($curl);
 		$curl_info = curl_getinfo($curl);
 
 		curl_close($curl);
-
-		if($curl_error !== '')
-		{
-			throw new \Exception($curl_error);
-		}
 		
 		if($curl_info['http_code'] != 200)
 		{
-			throw new \Exception('Postmark error - HTTP code: '.$curl_info['http_code'].' - Response '.$curl_response, $curl_info['http_code']);
+			if(in_array($curl_info['http_code'], array(401, 422)))
+			{
+				$api_response = json_decode($curl_response);
+
+				throw new APIException('Error code: '.$api_response->ErrorCode.' - Message: '.$api_response->Message, $curl_info['http_code']);
+			}
+			else
+			{
+				throw new HTTPException('HTTP code: '.$curl_info['http_code'].' - Response: '.$curl_response, $curl_info['http_code']);
+			}
 		}
 		
 		return json_decode($curl_response)->MessageID;
 	}
 
-	private function validate_email($email)
-	{
-		// http://php.net/manual/en/function.filter-var.php
-		// return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
-		// filter_var proved to be unworthy (passed foo..bar@domain.com as valid),
-		// and was therefore replace with
-		$regex = "/^([\w\!\#$\%\&\'\*\+\-\/\=\?\^\`{\|\}\~]+\.)*[\w\!\#$\%\&\'\*\+\-\/\=\?\^\`{\|\}\~]+@((((([a-z0-9]{1}[a-z0-9\-]{0,62}[a-z0-9]{1})|[a-z])\.)+[a-z]{2,6})|(\d{1,3}\.){3}\d{1,3}(\:\d{1,5})?)$/i";
-		// from http://fightingforalostcause.net/misc/2006/compare-email-regex.php
-		return (preg_match($regex, $email) === 1);
-	}
-
 }
+
+class APIException extends \Exception {}
+class HTTPException extends \Exception {}
+class RestrictionException extends \Exception {}
+class ValidationException extends \Exception {}
